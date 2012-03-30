@@ -1,0 +1,5 @@
+Code repository related to the following papers:
+
+Andres Löh and José Pedro Magalhães. Generic Programming with Indexed Functors. In Proceedings of the seventh ACM SIGPLAN Workshop on Generic Programming (WGP'11), pp. 1–12, ACM, 2011. http://www.dreixel.net/research/pdf/gpif.pdf
+
+José Pedro Magalhães and Andres Löh. A Formal Comparison of Approaches to Datatype-Generic Programming. In Proceedings Fourth Workshop on Mathematically Structured Functional Programming (MSFP '12), pp. 50–67, 2012. http://www.dreixel.net/research/pdf/fcadgp.pdf
