@@ -41,8 +41,8 @@ data Code i o = UNIT
 -- We cannot give the interpretation as a datatype.
 -- I don't fully understand why, but if I transpose the code to Agda it
 -- only compiles with --type-in-type...
-{-
 --data Interprt (c :: Code i o) (r :: i -> *) (j :: o) where
+{-
 data Interprt :: Code i o -> (i -> *) -> o -> * where
   I_U :: Interprt UNIT r o
   I_L :: Interprt a r o -> Interprt (SUM a b) r o
@@ -51,9 +51,12 @@ data Interprt :: Code i o -> (i -> *) -> o -> * where
   I_I :: r i -> Interprt (I i) r o
   I_O :: Interprt (O o) r o
   I_F :: Fix c r o -> Interprt (FIX c) r o
+--data Fix (c :: Code (Sum i o) o) (r :: i -> *) (j :: o) where
+data Fix :: Code (Sum i o) o -> (i -> *) -> o -> * where
+  Mu :: Interprt c (Sum1 r (Fix c r)) o -> Fix c r o
 -}
 -- So we use a data family. That seems to work.
-data family Interprt (c :: Code i o) (r :: i -> *) (j :: o) :: *
+data family Interprt (c :: Code i o) :: (i -> *) -> (o -> *)
 
 data instance Interprt UNIT       r o = I_U
 data instance Interprt (SUM a b)  r o = I_L (Interprt a r o)
@@ -61,25 +64,25 @@ data instance Interprt (SUM a b)  r o = I_L (Interprt a r o)
 data instance Interprt (PROD a b) r o = I_P (Interprt a r o) (Interprt b r o)
 data instance Interprt (COMP a b) r o = I_C (Interprt a (Interprt b r) o)
 data instance Interprt (I i)      r o = I_I (r i)
-data instance Interprt (O o)      r o where I_O :: Interprt (O o) r o
+data instance Interprt (O o')     r o where I_O :: Interprt (O o) r o
 -- Then we also don't need an auxiliary datatype for the interpretation
 -- of FIX:
 data instance Interprt (FIX c)    r o where
   I_F :: Interprt c (Sum1 r (Interprt (FIX c) r)) o -> Interprt (FIX c) r o
-  
+
 {-
---data Fix (c :: Code (Sum i o) o) (r :: i -> *) (j :: o) where
+data instance Interprt (FIX c)    r o = I_F (Fix c r o)
+
 data Fix :: Code (Sum i o) o -> (i -> *) -> o -> * where
   Mu :: Interprt c (Sum1 r (Fix c r)) o -> Fix c r o
 -}
-
 
 -------------------------------------------------------------------------------
 -- Map 
 -------------------------------------------------------------------------------
 
-class IMap (c :: Code i' *) where
-  imap :: (forall i. r i -> s i) -> Interprt c r o -> Interprt c s o
+class IMap (c :: Code i' o') where
+  imap :: (r :->: s) -> (Interprt c r :->: Interprt c s)
 
 instance IMap UNIT where
   imap _ I_U = I_U
@@ -98,8 +101,7 @@ instance IMap (I i) where
   imap f (I_I x) = I_I (f x)
 
 instance IMap (O o) where
-  imap _f _x = undefined -- x
+  imap f I_O = I_O
 
 instance (IMap c) => IMap (FIX c) where
   imap f (I_F x) = I_F (imap (f // imap f) x)
-
