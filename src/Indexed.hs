@@ -152,3 +152,20 @@ fromList L_TT (x:xs) = I_F (I_R (I_P (I_I (LL x)) (I_I (RR (fromList L_TT xs))))
 toList :: ListIndex o -> Interprt List r o -> [r o]
 toList L_TT (I_F (I_L I_U)) = []
 toList L_TT (I_F (I_R (I_P (I_I (LL x)) (I_I (RR xs))))) = (x:toList L_TT xs)
+
+-- Functorial mapping for lists
+data Const a b = C a
+
+fromList' :: [a] -> Interprt List (Const a) o
+fromList' []     = I_F (I_L I_U)
+fromList' (x:xs) = I_F (I_R (I_P (I_I (LL (C x))) (I_I (RR (fromList' xs)))))
+
+toList' :: Interprt List (Const a) o -> [a]
+toList' (I_F (I_L I_U)) = []
+toList' (I_F (I_R (I_P (I_I (LL (C x))) (I_I (RR xs))))) = (x:toList' xs)
+
+up :: (a -> b) -> (Const a :->: Const b)
+up f (C x) = C (f x)
+
+mapList :: (a -> b) -> [a] -> [b]
+mapList f = toList' . imap (up f) . fromList'
