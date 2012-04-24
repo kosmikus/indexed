@@ -105,3 +105,67 @@ instance IMap (O o) where
 
 instance (IMap c) => IMap (FIX c) where
   imap f (I_F x) = I_F (imap (f // imap f) x)
+
+-------------------------------------------------------------------------------
+-- Examples
+-------------------------------------------------------------------------------
+
+data Bot
+data Top = TT
+
+-- Booleans
+type BoolF = (SUM UNIT UNIT :: Code Bot Top)
+
+fromBool :: Bool -> Interprt BoolF r o
+fromBool True = I_L I_U
+fromBool False = I_R I_U
+
+toBool :: Interprt BoolF r o -> Bool
+toBool (I_L I_U) = True
+toBool (I_R I_U) = False
+
+-- Peano style natural numbers
+data Peano = Zero | Suc Peano
+
+type NatF = (SUM UNIT (I (R TT)) :: Code (Sum Bot Top) Top)
+type Nat = (FIX NatF :: Code Bot Top)
+
+fromNat :: Peano -> Interprt Nat r o
+fromNat Zero    = I_F (I_L I_U)
+fromNat (Suc n) = I_F (I_R (I_I (RR (fromNat n))))
+
+toNat :: Interprt Nat r o -> Peano
+toNat (I_F (I_L I_U))          = Zero
+toNat (I_F (I_R (I_I (RR n)))) = Suc (toNat n)
+
+-- Lists
+type ListF = (SUM UNIT (PROD (I (L TT)) (I (R TT))) :: Code (Sum Top Top) Top)
+type List = (FIX ListF :: Code Top Top)
+
+data ListIndex :: Top -> * where
+  L_TT :: ListIndex TT
+
+fromList :: ListIndex o -> [r o] -> Interprt List r o
+fromList L_TT []     = I_F (I_L I_U)
+fromList L_TT (x:xs) = I_F (I_R (I_P (I_I (LL x)) (I_I (RR (fromList L_TT xs)))))
+
+toList :: ListIndex o -> Interprt List r o -> [r o]
+toList L_TT (I_F (I_L I_U)) = []
+toList L_TT (I_F (I_R (I_P (I_I (LL x)) (I_I (RR xs))))) = (x:toList L_TT xs)
+
+-- Functorial mapping for lists
+data Const a b = C a
+
+fromList' :: [a] -> Interprt List (Const a) o
+fromList' []     = I_F (I_L I_U)
+fromList' (x:xs) = I_F (I_R (I_P (I_I (LL (C x))) (I_I (RR (fromList' xs)))))
+
+toList' :: Interprt List (Const a) o -> [a]
+toList' (I_F (I_L I_U)) = []
+toList' (I_F (I_R (I_P (I_I (LL (C x))) (I_I (RR xs))))) = (x:toList' xs)
+
+up :: (a -> b) -> (Const a :->: Const b)
+up f (C x) = C (f x)
+
+mapList :: (a -> b) -> [a] -> [b]
+mapList f = toList' . imap (up f) . fromList'
