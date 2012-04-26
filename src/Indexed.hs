@@ -107,6 +107,19 @@ instance (IMap c) => IMap (FIX c) where
   imap f (I_F x) = I_F (imap (f // imap f) x)
 
 -------------------------------------------------------------------------------
+-- Recursion schemes
+-------------------------------------------------------------------------------
+
+cata :: IMap c => (Interprt c (Sum1 r s) :->: s) -> (Interprt (FIX c) r :->: s)
+cata phi (I_F x) = phi (imap (id // cata phi) x)
+
+ana  :: IMap c => (s :->: Interprt c (Sum1 r s)) -> (s :->: Interprt (FIX c) r)
+ana psi x = I_F (imap (id // ana psi) (psi x))
+
+hylo :: IMap c => (Interprt c (Sum1 r t) :->: t) -> (s :->: Interprt c (Sum1 r s)) -> (s :->: t)
+hylo phi psi x = phi (imap (id // hylo phi psi) (psi x))
+
+-------------------------------------------------------------------------------
 -- Examples
 -------------------------------------------------------------------------------
 
